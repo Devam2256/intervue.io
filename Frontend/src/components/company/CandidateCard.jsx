@@ -4,26 +4,42 @@ import { Button } from "../common/ui/Button.jsx"
 import { Badge } from "../common/ui/Badge.jsx"
 import { Avatar, AvatarFallback } from "../common/ui/Avatar.jsx"
 import { Separator } from "../common/ui/Separator.jsx"
-import { Download, Calendar, X, CheckCircle } from "lucide-react"
+import { Download, Calendar, X, CheckCircle, Video, Link } from "lucide-react"
+import { useNavigate } from "react-router-dom"
 
 export function CandidateCard({ candidate, isLast, onStatusUpdate }) {
   const [loading, setLoading] = useState(false)
   const [showScheduleModal, setShowScheduleModal] = useState(false)
   const [meetLink, setMeetLink] = useState("")
+  const [interviewType, setInterviewType] = useState("google-meet") // "google-meet" or "video-call"
+  const navigate = useNavigate()
 
   const handleSchedule = async () => {
-    if (!meetLink.trim()) {
+    if (interviewType === "google-meet" && !meetLink.trim()) {
       alert("Please enter a Google Meet link");
       return;
     }
 
     setLoading(true);
     try {
+      let meetLinkToSend = meetLink;
+      
+      if (interviewType === "video-call") {
+        // Generate a room ID for video call
+        const randomId = Math.random().toString(36).substring(2, 9);
+        const timestamp = Date.now().toString().substring(-4);
+        const roomId = randomId + timestamp;
+        meetLinkToSend = `${window.location.origin}/room/${roomId}?type=one-on-one`;
+      }
+
       const response = await fetch(`/api/candidates/${candidate._id}/schedule`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ meetLink })
+        body: JSON.stringify({ 
+          meetLink: meetLinkToSend,
+          interviewType: interviewType
+        })
       });
 
       if (response.ok) {
@@ -31,6 +47,13 @@ export function CandidateCard({ candidate, isLast, onStatusUpdate }) {
         onStatusUpdate(updatedCandidate);
         setShowScheduleModal(false);
         setMeetLink("");
+        setInterviewType("google-meet");
+        
+        // If it's a video call, navigate to the room
+        if (interviewType === "video-call") {
+          const roomId = meetLinkToSend.split('/room/')[1].split('?')[0];
+          navigate(`/room/${roomId}?type=one-on-one`);
+        }
       } else {
         throw new Error('Failed to schedule interview');
       }
@@ -209,24 +232,71 @@ export function CandidateCard({ candidate, isLast, onStatusUpdate }) {
               Schedule Interview
             </h3>
             <div className="space-y-4">
+              {/* Interview Type Selection */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Google Meet Link
+                  Interview Type
                 </label>
-                <input
-                  type="url"
-                  value={meetLink}
-                  onChange={(e) => setMeetLink(e.target.value)}
-                  placeholder="https://meet.google.com/..."
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
+                <div className="flex gap-3">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="interviewType"
+                      value="google-meet"
+                      checked={interviewType === "google-meet"}
+                      onChange={(e) => setInterviewType(e.target.value)}
+                      className="text-blue-600 focus:ring-blue-500"
+                    />
+                    <Link className="h-4 w-4" />
+                    <span className="text-sm">Google Meet</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="interviewType"
+                      value="video-call"
+                      checked={interviewType === "video-call"}
+                      onChange={(e) => setInterviewType(e.target.value)}
+                      className="text-blue-600 focus:ring-blue-500"
+                    />
+                    <Video className="h-4 w-4" />
+                    <span className="text-sm">Video Call</span>
+                  </label>
+                </div>
               </div>
+
+              {/* Google Meet Link Input (only show if Google Meet is selected) */}
+              {interviewType === "google-meet" && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Google Meet Link
+                  </label>
+                  <input
+                    type="url"
+                    value={meetLink}
+                    onChange={(e) => setMeetLink(e.target.value)}
+                    placeholder="https://meet.google.com/..."
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              )}
+
+              {/* Video Call Info (only show if Video Call is selected) */}
+              {interviewType === "video-call" && (
+                <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
+                  <p className="text-sm text-blue-700 dark:text-blue-300">
+                    A video call room will be automatically generated and shared with the candidate.
+                  </p>
+                </div>
+              )}
+
               <div className="flex justify-end gap-3">
                 <Button
                   variant="outline"
                   onClick={() => {
                     setShowScheduleModal(false);
                     setMeetLink("");
+                    setInterviewType("google-meet");
                   }}
                   disabled={loading}
                 >
@@ -234,7 +304,7 @@ export function CandidateCard({ candidate, isLast, onStatusUpdate }) {
                 </Button>
                 <Button
                   onClick={handleSchedule}
-                  disabled={loading || !meetLink.trim()}
+                  disabled={loading || (interviewType === "google-meet" && !meetLink.trim())}
                 >
                   {loading ? "Scheduling..." : "Schedule Interview"}
                 </Button>

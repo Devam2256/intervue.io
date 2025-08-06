@@ -15,6 +15,9 @@ import { ForgotPasswordForm } from "./components/auth/ForgotPasswordForm"
 import { ResetPasswordForm } from "./components/auth/ResetPasswordForm"
 import { ProfileSetupForm } from "./components/auth/ProfileSetupForm"
 import { OTPVerificationForm } from "./components/auth/OTPVerificationForm"
+// Video calling components
+import HomePage from "./components/video/HomePage"
+import Room from "./components/video/Room"
 // Remove this import
 // import { SetPasswordForm } from "./components/auth/SetPasswordForm";
 import "./App.css"
@@ -330,6 +333,10 @@ function App() {
             </div>
           </ProtectedRoute>
         } />
+        
+        {/* Video Calling Routes */}
+        <Route path="/video" element={<HomePage />} />
+        <Route path="/room/:roomId" element={<Room />} />
         
         {/* Legacy routes for backward compatibility */}
         <Route path="/company" element={<Navigate to="/dashboard" replace />} />

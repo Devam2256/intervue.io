@@ -1,0 +1,70 @@
+.room-container {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  background: #000;
+  overflow: hidden;
+}
+
+.room-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 1rem;
+  text-align: center;
+  font-size: 1.2rem;
+  font-weight: bold;
+  z-index: 1000;
+}
+
+.exit-button {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: #dc3545;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  z-index: 1001;
+  transition: background-color 0.3s ease;
+}
+
+.exit-button:hover {
+  background: #c82333;
+}
+
+.video-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+/* ZegoUIKit specific styles */
+.zego-video-container {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.zego-video-view {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .room-header {
+    font-size: 1rem;
+    padding: 0.8rem;
+  }
+  
+  .exit-button {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.8rem;
+  }
+} 

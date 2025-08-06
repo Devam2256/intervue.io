@@ -224,7 +224,7 @@ exports.getApplicationStats = async (req, res) => {
 exports.scheduleInterview = async (req, res) => {
   try {
     const { candidateId } = req.params;
-    const { meetLink } = req.body;
+    const { meetLink, interviewType = 'google-meet' } = req.body;
 
     // Find candidate and populate related data
     const candidate = await Candidate.findById(candidateId)
@@ -240,8 +240,9 @@ exports.scheduleInterview = async (req, res) => {
     candidate.status = 'Scheduled';
     candidate.interviewSchedule = {
       scheduledAt: new Date(),
-      location: 'Google Meet',
-      notes: 'Interview scheduled via Google Meet'
+      location: interviewType === 'video-call' ? 'Video Call' : 'Google Meet',
+      notes: interviewType === 'video-call' ? 'Interview scheduled via Video Call' : 'Interview scheduled via Google Meet',
+      interviewType: interviewType
     };
     await candidate.save();
 
@@ -260,11 +261,11 @@ exports.scheduleInterview = async (req, res) => {
       availability: candidate.availability || 'Not specified'
     };
 
-    await sendEmail(candidateEmail, 'interviewScheduled', candidateName, jobTitle, companyName, meetLink, applicationDetails);
+    await sendEmail(candidateEmail, 'interviewScheduled', candidateName, jobTitle, companyName, meetLink, applicationDetails, interviewType);
 
     // Email to company (if company email is available)
     if (candidate.company_id.email) {
-      await sendEmail(candidate.company_id.email, 'interviewScheduled', companyName, jobTitle, companyName, meetLink, applicationDetails);
+      await sendEmail(candidate.company_id.email, 'interviewScheduled', companyName, jobTitle, companyName, meetLink, applicationDetails, interviewType);
     }
 
     res.status(200).json(candidate);

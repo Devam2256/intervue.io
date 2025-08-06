@@ -220,7 +220,7 @@ const emailTemplates = {
     `
   }),
 
-  interviewScheduled: (candidateName, jobTitle, companyName, meetLink, applicationDetails) => ({
+  interviewScheduled: (candidateName, jobTitle, companyName, meetLink, applicationDetails, interviewType = 'google-meet') => ({
     subject: `InterVue.io - Interview Scheduled for ${jobTitle}`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f9fa;">
@@ -244,7 +244,7 @@ const emailTemplates = {
               <ul style="color: #374151; margin: 0; padding-left: 20px; line-height: 1.6;">
                 <li><strong>Position:</strong> ${jobTitle || 'Not specified'}</li>
                 <li><strong>Company:</strong> ${companyName || 'Not specified'}</li>
-                <li><strong>Platform:</strong> Google Meet</li>
+                <li><strong>Platform:</strong> ${interviewType === 'video-call' ? 'InterVue Video Call' : 'Google Meet'}</li>
                 <li><strong>Meeting Link:</strong> <a href="${meetLink || '#'}" style="color: #2563eb;">Join Meeting</a></li>
               </ul>
             </div>
@@ -256,6 +256,7 @@ const emailTemplates = {
                 <li>Find a quiet, well-lit environment</li>
                 <li>Have your resume and portfolio ready</li>
                 <li>Prepare questions about the role and company</li>
+                ${interviewType === 'video-call' ? '<li>Make sure you have a stable internet connection</li>' : ''}
               </ul>
             </div>
           </div>
