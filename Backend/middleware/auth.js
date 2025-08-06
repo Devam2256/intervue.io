@@ -16,7 +16,7 @@ const createRateLimiter = (windowMs, max, message) => {
 // Auth rate limiters
 const authLimiter = createRateLimiter(
   15 * 60 * 1000, // 15 minutes
-  5, // 5 requests per window
+  20, // Increased from 5 to 20 requests per window to fix 429 error
   'Too many authentication attempts. Please try again later.'
 );
 

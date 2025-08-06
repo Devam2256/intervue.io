@@ -9,7 +9,6 @@ export function ForgotPasswordForm() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [emailError, setEmailError] = useState("");
-  const [resetMethod, setResetMethod] = useState("email-link"); // email-link or otp
 
   const validateEmail = (email) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -46,12 +45,7 @@ export function ForgotPasswordForm() {
     setLoading(true);
 
     try {
-      // Choose the appropriate endpoint based on the selected reset method
-      const endpoint = resetMethod === "email-link" 
-        ? '/api/auth/forgot-password' 
-        : '/api/auth/forgot-password-otp';
-
-      const response = await fetch(endpoint, {
+      const response = await fetch('/api/auth/forgot-password-otp', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -62,19 +56,15 @@ export function ForgotPasswordForm() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to send reset email');
+        throw new Error(data.error || 'Failed to send verification code');
       }
 
-      if (resetMethod === "email-link") {
-        setSuccess("Password reset email sent successfully! Please check your email for further instructions.");
-      } else {
-        setSuccess("Verification code sent successfully! Redirecting to verification page...");
-        
-        // Redirect to OTP verification page after 2 seconds
-        setTimeout(() => {
-          navigate(`/auth/verify-reset-otp?email=${encodeURIComponent(email)}`);
-        }, 2000);
-      }
+      setSuccess("Verification code sent successfully! Redirecting to verification page...");
+      
+      // Redirect to OTP verification page after 2 seconds
+      setTimeout(() => {
+        navigate(`/auth/verify-reset-otp?email=${encodeURIComponent(email)}`);
+      }, 2000);
 
     } catch (error) {
       setError(error.message);
@@ -95,7 +85,7 @@ export function ForgotPasswordForm() {
             Reset Password
           </h2>
           <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-            Enter your email address and we'll help you reset your password.
+            Enter your email address and we'll send you a verification code to reset your password.
           </p>
         </div>
 
@@ -147,38 +137,12 @@ export function ForgotPasswordForm() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Reset Method
-              </label>
-              <div className="flex space-x-4">
-                <label className="inline-flex items-center">
-                  <input
-                    type="radio"
-                    className="form-radio h-4 w-4 text-blue-600"
-                    checked={resetMethod === "email-link"}
-                    onChange={() => setResetMethod("email-link")}
-                  />
-                  <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Email Link</span>
-                </label>
-                <label className="inline-flex items-center">
-                  <input
-                    type="radio"
-                    className="form-radio h-4 w-4 text-blue-600"
-                    checked={resetMethod === "otp"}
-                    onChange={() => setResetMethod("otp")}
-                  />
-                  <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">OTP Verification</span>
-                </label>
-              </div>
-            </div>
-
-            <div>
               <button
                 type="submit"
                 disabled={loading}
                 className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? "Sending..." : resetMethod === "email-link" ? "Send Reset Link" : "Send Verification Code"}
+                {loading ? "Sending..." : "Send Verification Code"}
               </button>
             </div>
 

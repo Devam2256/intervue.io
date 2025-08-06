@@ -8,6 +8,9 @@ const JobController = require("../controllers/JobController");
 // GET /api/jobs - Get all jobs
 router.get("/jobs", JobController.getJobs);
 
+// GET /api/jobs/company/:companyId - Get jobs by company ID
+router.get("/jobs/company/:companyId", JobController.getJobsByCompany);
+
 // GET /api/jobs/:id - Get a single job by ID
 router.get("/jobs/:id", JobController.getJobById);
 

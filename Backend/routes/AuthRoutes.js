@@ -5,7 +5,6 @@ const Company = require('../models/Company');
 // Remove this line as we'll use User model directly
 // const UserProfile = require('../models/UserProfile');
 const { sendEmail } = require('../config/email');
-const { generateOTP } = require('../config/generateOTP');
 const { generateToken, authLimiter, otpLimiter } = require('../middleware/auth');
 const { setUserSession, clearUserSession, requireAuth } = require('../middleware/session');
 
@@ -86,10 +85,6 @@ router.post('/verify-otp', otpLimiter, async (req, res) => {
     user.isEmailVerified = true;
     user.clearOTP();
     await user.save();
-
-    // Send welcome email
-    const name = user.userType === 'company' ? user.companyName : `${user.firstName} ${user.lastName}`;
-    await sendEmail(email, 'welcomeEmail', user.userType, name);
 
     // Set session
     setUserSession(req, user);
@@ -272,7 +267,8 @@ router.get('/session', (req, res) => {
     res.json({
       isAuthenticated: true,
       user: {
-        id: req.session.userId,
+        _id: req.session.userId,
+        id: req.session.userId, // Keep both for compatibility
         email: req.session.email,
         userType: req.session.userType
       }
@@ -282,75 +278,9 @@ router.get('/session', (req, res) => {
   }
 });
 
-// Forgot password
-router.post('/forgot-password', authLimiter, async (req, res) => {
-  try {
-    const { email } = req.body;
 
-    if (!email) {
-      return res.status(400).json({ error: 'Email is required' });
-    }
 
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
 
-    // Generate reset token
-    const resetToken = require('crypto').randomBytes(32).toString('hex');
-    user.resetPasswordToken = resetToken;
-    user.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
-    await user.save();
-
-    const emailSent = await sendEmail(email, 'passwordReset', resetToken);
-    
-    if (!emailSent) {
-      return res.status(500).json({ error: 'Failed to send reset email' });
-    }
-
-    res.json({ message: 'Password reset email sent successfully' });
-
-  } catch (error) {
-    console.error('Forgot password error:', error);
-    res.status(500).json({ error: 'Failed to process password reset' });
-  }
-});
-
-// Reset password
-router.post('/reset-password', async (req, res) => {
-  try {
-    const { token, newPassword } = req.body;
-
-    if (!token || !newPassword) {
-      return res.status(400).json({ error: 'Token and new password are required' });
-    }
-
-    if (newPassword.length < 6) {
-      return res.status(400).json({ error: 'Password must be at least 6 characters long' });
-    }
-
-    const user = await User.findOne({
-      resetPasswordToken: token,
-      resetPasswordExpires: { $gt: Date.now() }
-    });
-
-    if (!user) {
-      return res.status(400).json({ error: 'Invalid or expired reset token' });
-    }
-
-    // Update password
-    user.password = newPassword;
-    user.resetPasswordToken = undefined;
-    user.resetPasswordExpires = undefined;
-    await user.save();
-
-    res.json({ message: 'Password reset successful' });
-
-  } catch (error) {
-    console.error('Reset password error:', error);
-    res.status(500).json({ error: 'Password reset failed' });
-  }
-});
 
 // Get current user
 router.get('/me', requireAuth, async (req, res) => {
@@ -399,7 +329,7 @@ router.post('/forgot-password-otp', authLimiter, async (req, res) => {
     const otp = user.generateOTP();
     await user.save();
 
-    const emailSent = await sendEmail(email, 'otpVerification', otp, user.userType);
+    const emailSent = await sendEmail(email, 'passwordResetOTP', otp);
     
     if (!emailSent) {
       return res.status(500).json({ error: 'Failed to send verification email' });

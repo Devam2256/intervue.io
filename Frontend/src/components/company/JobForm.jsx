@@ -219,7 +219,7 @@ export function JobForm({ mode = "create", initialData = null, onSubmit }) {
   return (
     <div className="w-full">
       {/* Desktop submit button at top right */}
-      <div className="hidden sm:flex justify-end items-center gap-4 p-4 mx-4 mt-4">
+      <div className="hidden sm:flex justify-end items-center gap-4 p-4 mt-4">
         <Button type="submit" form="job-form" disabled={loading} className="flex items-center gap-2">
           {loading ? (mode === "edit" ? "Saving..." : "Creating...") : (mode === "edit" ? "Save Changes" : "Create Job")}
         </Button>

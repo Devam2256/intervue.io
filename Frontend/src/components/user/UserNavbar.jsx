@@ -104,7 +104,7 @@ export function UserNavbar({ user }) {
               >
                 <Avatar
                   src={user?.avatar}
-                  alt={user?.fullName || "User"}
+                  alt={`${user?.firstName} ${user?.lastName}`}
                   fallback={user?.firstName?.[0] || "U"}
                   size="sm"
                 />

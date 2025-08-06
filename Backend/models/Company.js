@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const companySchema = new mongoose.Schema({
   c_id: {
     type: mongoose.Schema.Types.ObjectId,
-    default: mongoose.Types.ObjectId,
+    default: () => new mongoose.Types.ObjectId(),
     unique: true
   },
   userId: {

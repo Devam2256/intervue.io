@@ -5,7 +5,23 @@ const Job = require("../models/Job");
 exports.getJobs = async (req, res) => {
   try {
     // Find all jobs and populate company information
-    const jobs = await Job.find().populate('company_id');
+    const jobs = await Job.find().populate('company_id', 'name industry logo location companySize description website email phone');
+    
+    // Send success response with jobs data
+    res.status(200).json(jobs);
+  } catch (err) {
+    // Send error response if something goes wrong
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Get jobs by company ID
+exports.getJobsByCompany = async (req, res) => {
+  try {
+    const { companyId } = req.params;
+    
+    // Find jobs by company ID and populate company information
+    const jobs = await Job.find({ company_id: companyId }).populate('company_id', 'name industry logo location companySize description website email phone');
     
     // Send success response with jobs data
     res.status(200).json(jobs);
@@ -19,7 +35,7 @@ exports.getJobs = async (req, res) => {
 exports.getJobById = async (req, res) => {
   try {
     // Find job by ID and populate company information
-    const job = await Job.findById(req.params.id).populate('company_id');
+    const job = await Job.findById(req.params.id).populate('company_id', 'name industry logo location companySize description website email phone');
     
     // If job not found, send 404 error
     if (!job) {
@@ -37,9 +53,6 @@ exports.getJobById = async (req, res) => {
 // Create a new job
 exports.createJob = async (req, res) => {
   try {
-    // Log the incoming data for debugging
-    console.log('Creating job with data:', req.body);
-    
     // Extract data from request body
     const {
       company_id,    // ID of the company posting the job
@@ -54,6 +67,29 @@ exports.createJob = async (req, res) => {
       skills,        // Array of required skills
       benefits       // Array of benefits
     } = req.body;
+    
+    // Validate required fields
+    if (!company_id) {
+      return res.status(400).json({ error: 'Company ID is required' });
+    }
+    if (!title) {
+      return res.status(400).json({ error: 'Job title is required' });
+    }
+    if (!description) {
+      return res.status(400).json({ error: 'Job description is required' });
+    }
+    if (!category) {
+      return res.status(400).json({ error: 'Job category is required' });
+    }
+    if (!type) {
+      return res.status(400).json({ error: 'Job type is required' });
+    }
+    if (!location) {
+      return res.status(400).json({ error: 'Job location is required' });
+    }
+    if (!salary) {
+      return res.status(400).json({ error: 'Job salary is required' });
+    }
     
     // Create new job with the extracted data
     const job = new Job({

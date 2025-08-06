@@ -1,10 +1,9 @@
 // CreateJobForm: Form for creating or editing job postings
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { Button } from "../common/ui/Button"
 import { Input, Textarea, Select, Label } from "../common/ui/Input"
 import { X, Plus, ArrowLeft } from "lucide-react"
-import { SleekNavbar } from "./SleekNavbar";
 import { Card } from "../common/ui/Card";
 
 // Predefined options for dropdown menus
@@ -32,7 +31,12 @@ const priorityOptions = [
 
 export function CreateJobForm({ asPage = false, editMode = false, profile }) {
   const navigate = useNavigate();
-  useParams(); // For future use when editing existing jobs
+  const { id } = useParams(); // Get job ID for editing
+  
+  // Debug profile data
+  console.log('CreateJobForm - Profile data:', profile);
+  console.log('CreateJobForm - Profile ID:', profile?._id);
+  console.log('CreateJobForm - Profile name:', profile?.name);
 
   // Form data state - holds all the job information
   const [formData, setFormData] = useState(() => ({
@@ -52,6 +56,44 @@ export function CreateJobForm({ asPage = false, editMode = false, profile }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
+
+  // Fetch job data when in edit mode
+  useEffect(() => {
+    if (editMode && id) {
+      const fetchJobData = async () => {
+        setLoading(true);
+        try {
+          const response = await fetch(`/api/jobs/${id}`, {
+            credentials: 'include'
+          });
+          if (response.ok) {
+            const data = await response.json();
+            const jobData = data.job || data;
+            setFormData({
+              title: jobData.title || "",
+              description: jobData.description || "",
+              category: jobData.category || "",
+              type: jobData.type || "",
+              location: jobData.location || "",
+              salary: jobData.salary || "",
+              priority: jobData.priority || "Medium",
+              requirements: jobData.requirements && jobData.requirements.length > 0 ? jobData.requirements : [""],
+              skills: jobData.skills && jobData.skills.length > 0 ? jobData.skills : [""],
+              benefits: jobData.benefits && jobData.benefits.length > 0 ? jobData.benefits : [""],
+            });
+          } else {
+            setError("Failed to fetch job data");
+          }
+        } catch (error) {
+          setError("Error fetching job data");
+        } finally {
+          setLoading(false);
+        }
+      };
+      
+      fetchJobData();
+    }
+  }, [editMode, id]);
 
   // Validation functions
   const validateSalary = (value) => {
@@ -185,17 +227,31 @@ export function CreateJobForm({ asPage = false, editMode = false, profile }) {
     // Validate all fields
     const errors = {};
     
+    // Check required fields
+    const requiredFields = ['title', 'description', 'category', 'type', 'location', 'salary'];
+    requiredFields.forEach(field => {
+      if (!formData[field] || formData[field].trim() === '') {
+        errors[field] = `${field.charAt(0).toUpperCase() + field.slice(1)} is required`;
+      }
+    });
+    
     // Validate salary
-    const salaryError = validateSalary(formData.salary);
-    if (salaryError) errors.salary = salaryError;
+    if (formData.salary && formData.salary.trim()) {
+      const salaryError = validateSalary(formData.salary);
+      if (salaryError) errors.salary = salaryError;
+    }
     
     // Validate job title
-    const titleError = validateJobTitle(formData.title);
-    if (titleError) errors.title = titleError;
+    if (formData.title && formData.title.trim()) {
+      const titleError = validateJobTitle(formData.title);
+      if (titleError) errors.title = titleError;
+    }
     
     // Validate location
-    const locationError = validateLocation(formData.location);
-    if (locationError) errors.location = locationError;
+    if (formData.location && formData.location.trim()) {
+      const locationError = validateLocation(formData.location);
+      if (locationError) errors.location = locationError;
+    }
     
     // Validate requirements
     formData.requirements.forEach((req, index) => {
@@ -215,31 +271,49 @@ export function CreateJobForm({ asPage = false, editMode = false, profile }) {
     setError("");
 
     try {
-      // Use company ID from profile or a default one for testing
-      const company_id = profile?._id || "64e8f8e2b1c2a3d4e5f6a7b8";
+      // Use company ID from profile
+      const company_id = profile?._id;
+      
+      if (!company_id) {
+        throw new Error("Company profile not found. Please complete your company profile first.");
+      }
       
       // Prepare data to send to backend
       const payload = { ...formData, company_id };
       
-      // Send POST request to create job
-      const res = await fetch("/api/jobs", {
-        method: "POST",
+      console.log('Creating job with payload:', payload);
+      console.log('Company ID:', company_id);
+      console.log('Job title:', formData.title);
+      console.log('Job category:', formData.category);
+      console.log('Job type:', formData.type);
+      
+      // Determine the API endpoint and method based on edit mode
+      const url = editMode ? `/api/jobs/${id}` : "/api/jobs";
+      const method = editMode ? "PUT" : "POST";
+      
+      console.log('Making request to:', url, 'with method:', method);
+      
+      // Send request to create or update job
+      const res = await fetch(url, {
+        method: method,
         headers: { "Content-Type": "application/json" },
+        credentials: 'include',
         body: JSON.stringify(payload),
       });
 
       // Check if request was successful
       if (!res.ok) {
-        throw new Error("Failed to create job");
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || (editMode ? "Failed to update job" : "Failed to create job"));
       }
 
       // Parse response
       await res.json();
       
       // Navigate back to dashboard
-      navigate("/");
+      navigate("/dashboard");
     } catch (error) {
-      setError(error.message || "Error creating job");
+      setError(error.message || (editMode ? "Error updating job" : "Error creating job"));
     } finally {
       setLoading(false);
     }
@@ -251,8 +325,8 @@ export function CreateJobForm({ asPage = false, editMode = false, profile }) {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header section with buttons for desktop */}
-      <div className="hidden sm:flex justify-between items-center gap-4 p-4 mx-4 mt-4">
-        <Button variant="sleek" onClick={() => navigate(-1)} className="flex items-center gap-2 -ml-2">
+      <div className="hidden sm:flex justify-between items-center gap-4 p-4">
+        <Button variant="sleek" onClick={() => navigate('/dashboard')} className="flex items-center gap-2 -ml-2">
           <ArrowLeft className="h-4 w-4" />
           <span>Back to Dashboard</span>
         </Button>
@@ -262,7 +336,7 @@ export function CreateJobForm({ asPage = false, editMode = false, profile }) {
       </div>
       {/* Mobile fixed bottom bar */}
       <div className="sm:hidden fixed bottom-0 left-0 right-0 z-30 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex justify-between px-6 py-2 gap-2 shadow-lg">
-        <Button variant="sleek" onClick={() => navigate(-1)} className="flex-1 flex items-center justify-center gap-2">
+        <Button variant="sleek" onClick={() => navigate('/dashboard')} className="flex-1 flex items-center justify-center gap-2">
           <ArrowLeft className="h-4 w-4" />
           Back
         </Button>

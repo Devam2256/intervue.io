@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
-import { useNavigate, Link, useSearchParams } from "react-router-dom";
+import { useNavigate, Link, useSearchParams, useLocation } from "react-router-dom";
 import { ArrowLeft, CheckCircle } from "lucide-react";
 
 export function OTPVerificationForm() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const location = useLocation();
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -13,6 +14,9 @@ export function OTPVerificationForm() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [step, setStep] = useState("verify-otp"); // verify-otp or reset-password
+  
+  // Determine if this is signup OTP or password reset OTP
+  const isSignupOTP = location.pathname === '/auth/verify-otp';
 
   useEffect(() => {
     const emailFromUrl = searchParams.get('email');
@@ -33,7 +37,9 @@ export function OTPVerificationForm() {
     }
 
     try {
-      const response = await fetch('/api/auth/verify-reset-otp', {
+      const endpoint = isSignupOTP ? '/api/auth/verify-otp' : '/api/auth/verify-reset-otp';
+      
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -50,8 +56,17 @@ export function OTPVerificationForm() {
         throw new Error(data.error || 'OTP verification failed');
       }
 
-      setSuccess("OTP verified successfully! Please set your new password.");
-      setStep("reset-password");
+      if (isSignupOTP) {
+        // For signup OTP, redirect to profile setup
+        setSuccess("Email verified successfully! Redirecting to profile setup...");
+        setTimeout(() => {
+          navigate('/profile-setup');
+        }, 2000);
+      } else {
+        // For password reset OTP, proceed to password reset
+        setSuccess("OTP verified successfully! Please set your new password.");
+        setStep("reset-password");
+      }
 
     } catch (error) {
       setError(error.message);
@@ -65,7 +80,9 @@ export function OTPVerificationForm() {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/auth/forgot-password-otp', {
+      const endpoint = isSignupOTP ? '/api/auth/resend-otp' : '/api/auth/forgot-password-otp';
+      
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -152,11 +169,15 @@ export function OTPVerificationForm() {
             Back to Home
           </Link>
           <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
-            {step === "verify-otp" ? "Verify Your Email" : "Reset Your Password"}
+            {step === "verify-otp" 
+              ? (isSignupOTP ? "Verify Your Email" : "Verify Reset Code")
+              : "Reset Your Password"}
           </h2>
           <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
             {step === "verify-otp" 
-              ? "Enter the verification code sent to your email" 
+              ? (isSignupOTP 
+                  ? "Enter the verification code sent to your email to complete registration" 
+                  : "Enter the verification code sent to your email to reset your password")
               : "Create a new password for your account"}
           </p>
         </div>

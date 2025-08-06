@@ -1,14 +1,23 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Building, User, ArrowLeft, Save, Eye, EyeOff } from "lucide-react";
+import { Building, User, ArrowLeft, Save, Eye, EyeOff, Lock } from "lucide-react";
+import { Button } from "../common/ui/Button";
+import { Input, Textarea, Select, Label } from "../common/ui/Input";
+import { Card } from "../common/ui/Card";
 
-export function ProfileSetupForm() {
+export function ProfileSetupForm({ onProfileComplete }) {
   const navigate = useNavigate();
   const [userType, setUserType] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
+  
+  // Password fields
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Company form data
   const [companyData, setCompanyData] = useState({
@@ -150,13 +159,7 @@ export function ProfileSetupForm() {
     }
   };
 
-  // Add password fields to the form
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  
-  // Add password validation
+  // Password validation functions
   const validatePassword = (password) => {
     if (!password) return "Password is required";
     if (password.length < 6) return "Password must be at least 6 characters";
@@ -224,6 +227,11 @@ export function ProfileSetupForm() {
 
       setSuccess("Profile setup successful! Redirecting to dashboard...");
 
+      // Call the onProfileComplete callback to refresh user data
+      if (onProfileComplete) {
+        onProfileComplete();
+      }
+
       // Redirect to appropriate dashboard after 2 seconds
       setTimeout(() => {
         if (userType === 'company') {
@@ -236,6 +244,7 @@ export function ProfileSetupForm() {
       }, 2000);
 
     } catch (error) {
+      console.error('Profile setup submission error:', error);
       setError(error.message);
     } finally {
       setLoading(false);
@@ -254,426 +263,468 @@ export function ProfileSetupForm() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Header */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <button
-                onClick={() => navigate('/auth/login')}
-                className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </button>
-              <div>
-                <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
-                  Complete Your Profile
-                </h1>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Set up your {userType === 'company' ? 'company' : 'professional'} profile to get started
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-2">
-              {userType === 'company' ? (
-                <Building className="h-5 w-5 text-blue-600" />
-              ) : (
-                <User className="h-5 w-5 text-green-600" />
-              )}
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300 capitalize">
-                {userType}
-              </span>
+    <div className="relative min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="relative z-20 w-full h-full p-4 sm:p-8">
+        {/* Success Message */}
+        {success && (
+          <div className="fixed top-4 right-4 z-50 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg">
+            {success}
+          </div>
+        )}
+
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+          <div className="flex items-center space-x-3">
+            <Button
+              variant="sleek"
+              onClick={() => navigate('/auth/login')}
+              className="flex items-center gap-2 -ml-2"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span>Back to Login</span>
+            </Button>
+            <div>
+              <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
+                Complete Your Profile
+              </h1>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Set up your {userType === 'company' ? 'company' : 'professional'} profile to get started
+              </p>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* Form */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-          {error && (
-            <div className="mb-6 p-4 bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-300 rounded-md">
-              {error}
-            </div>
-          )}
-
-          {success && (
-            <div className="mb-6 p-4 bg-green-100 dark:bg-green-900 border border-green-400 dark:border-green-700 text-green-700 dark:text-green-300 rounded-md">
-              {success}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="flex items-center space-x-2">
             {userType === 'company' ? (
-              // Company Profile Form
-              <>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Company Name *
-                    </label>
-                    <input
-                      type="text"
-                      value={companyData.companyName}
-                      onChange={(e) => handleInputChange("companyName", e.target.value)}
-                      onBlur={(e) => handleFieldBlur("companyName", e.target.value)}
-                      className={`w-full px-3 py-2 border rounded-md ${
-                        fieldErrors.companyName 
-                          ? 'border-red-300 dark:border-red-600' 
-                          : 'border-gray-300 dark:border-gray-600'
-                      } bg-white dark:bg-gray-700 text-gray-900 dark:text-white`}
-                      placeholder="Enter company name"
-                    />
-                    {fieldErrors.companyName && (
-                      <p className="mt-1 text-sm text-red-600 dark:text-red-400">{fieldErrors.companyName}</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Industry
-                    </label>
-                    <input
-                      type="text"
-                      value={companyData.industry}
-                      onChange={(e) => handleInputChange("industry", e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                      placeholder="e.g., Technology, Healthcare"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Company Description
-                  </label>
-                  <textarea
-                    value={companyData.description}
-                    onChange={(e) => handleInputChange("description", e.target.value)}
-                    rows={4}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    placeholder="Describe your company..."
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Location
-                    </label>
-                    <input
-                      type="text"
-                      value={companyData.location}
-                      onChange={(e) => handleInputChange("location", e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                      placeholder="City, State"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Company Size
-                    </label>
-                    <select
-                      value={companyData.companySize}
-                      onChange={(e) => handleInputChange("companySize", e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    >
-                      <option value="">Select size</option>
-                      <option value="1-10">1-10 employees</option>
-                      <option value="11-50">11-50 employees</option>
-                      <option value="51-200">51-200 employees</option>
-                      <option value="201-500">201-500 employees</option>
-                      <option value="500+">500+ employees</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Website
-                    </label>
-                    <input
-                      type="url"
-                      value={companyData.website}
-                      onChange={(e) => handleInputChange("website", e.target.value)}
-                      onBlur={(e) => handleFieldBlur("website", e.target.value, 'url')}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                      placeholder="https://example.com"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Phone
-                    </label>
-                    <input
-                      type="tel"
-                      value={companyData.phone}
-                      onChange={(e) => handleInputChange("phone", e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                      placeholder="+1 (555) 123-4567"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Benefits (comma-separated)
-                  </label>
-                  <input
-                    type="text"
-                    value={companyData.benefits.join(', ')}
-                    onChange={(e) => handleArrayChange("benefits", e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    placeholder="Health insurance, 401k, Remote work"
-                  />
-                </div>
-              </>
+              <Building className="h-5 w-5 text-blue-600" />
             ) : (
-              // User Profile Form
-              <>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      First Name *
-                    </label>
-                    <input
-                      type="text"
-                      value={userData.firstName}
-                      onChange={(e) => handleInputChange("firstName", e.target.value)}
-                      onBlur={(e) => handleFieldBlur("firstName", e.target.value)}
-                      className={`w-full px-3 py-2 border rounded-md ${
-                        fieldErrors.firstName 
-                          ? 'border-red-300 dark:border-red-600' 
-                          : 'border-gray-300 dark:border-gray-600'
-                      } bg-white dark:bg-gray-700 text-gray-900 dark:text-white`}
-                      placeholder="Enter first name"
-                    />
-                    {fieldErrors.firstName && (
-                      <p className="mt-1 text-sm text-red-600 dark:text-red-400">{fieldErrors.firstName}</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Last Name *
-                    </label>
-                    <input
-                      type="text"
-                      value={userData.lastName}
-                      onChange={(e) => handleInputChange("lastName", e.target.value)}
-                      onBlur={(e) => handleFieldBlur("lastName", e.target.value)}
-                      className={`w-full px-3 py-2 border rounded-md ${
-                        fieldErrors.lastName 
-                          ? 'border-red-300 dark:border-red-600' 
-                          : 'border-gray-300 dark:border-gray-600'
-                      } bg-white dark:bg-gray-700 text-gray-900 dark:text-white`}
-                      placeholder="Enter last name"
-                    />
-                    {fieldErrors.lastName && (
-                      <p className="mt-1 text-sm text-red-600 dark:text-red-400">{fieldErrors.lastName}</p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Phone
-                    </label>
-                    <input
-                      type="tel"
-                      value={userData.phone}
-                      onChange={(e) => handleInputChange("phone", e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                      placeholder="+1 (555) 123-4567"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Location
-                    </label>
-                    <input
-                      type="text"
-                      value={userData.location}
-                      onChange={(e) => handleInputChange("location", e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                      placeholder="City, State"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Professional Headline
-                  </label>
-                  <input
-                    type="text"
-                    value={userData.headline}
-                    onChange={(e) => handleInputChange("headline", e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    placeholder="e.g., Senior Frontend Developer"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Bio
-                  </label>
-                  <textarea
-                    value={userData.bio}
-                    onChange={(e) => handleInputChange("bio", e.target.value)}
-                    rows={4}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    placeholder="Tell us about yourself..."
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Years of Experience
-                    </label>
-                    <input
-                      type="text"
-                      value={userData.experience}
-                      onChange={(e) => handleInputChange("experience", e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                      placeholder="e.g., 5 years"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Employment Status
-                    </label>
-                    <select
-                      value={userData.employmentStatus}
-                      onChange={(e) => handleInputChange("employmentStatus", e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    >
-                      <option value="Looking for opportunities">Looking for opportunities</option>
-                      <option value="Open to opportunities">Open to opportunities</option>
-                      <option value="Not looking">Not looking</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Skills (comma-separated)
-                  </label>
-                  <input
-                    type="text"
-                    value={userData.skills.join(', ')}
-                    onChange={(e) => handleArrayChange("skills", e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    placeholder="React, JavaScript, Node.js"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Expected Salary
-                  </label>
-                  <input
-                    type="number"
-                    value={userData.expectedSalary}
-                    onChange={(e) => handleInputChange("expectedSalary", e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    placeholder="e.g., 80000"
-                  />
-                </div>
-              </>
+              <User className="h-5 w-5 text-green-600" />
             )}
-
-            {/* Add password fields to both company and user forms */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Password *
-                </label>
-                <div className="relative">
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    onBlur={(e) => handleFieldBlur("password", e.target.value)}
-                    className={`w-full px-3 py-2 border rounded-md ${
-                      fieldErrors.password 
-                        ? 'border-red-300 dark:border-red-600' 
-                        : 'border-gray-300 dark:border-gray-600'
-                    } bg-white dark:bg-gray-700 text-gray-900 dark:text-white`}
-                    placeholder="Create a password"
-                  />
-                  <button
-                    type="button"
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? (
-                      <EyeOff className="h-5 w-5 text-gray-400" />
-                    ) : (
-                      <Eye className="h-5 w-5 text-gray-400" />
-                    )}
-                  </button>
-                </div>
-                {fieldErrors.password && (
-                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{fieldErrors.password}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Confirm Password *
-                </label>
-                <div className="relative">
-                  <input
-                    type={showConfirmPassword ? "text" : "password"}
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    onBlur={(e) => handleFieldBlur("confirmPassword", e.target.value)}
-                    className={`w-full px-3 py-2 border rounded-md ${
-                      fieldErrors.confirmPassword 
-                        ? 'border-red-300 dark:border-red-600' 
-                        : 'border-gray-300 dark:border-gray-600'
-                    } bg-white dark:bg-gray-700 text-gray-900 dark:text-white`}
-                    placeholder="Confirm your password"
-                  />
-                  <button
-                    type="button"
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  >
-                    {showConfirmPassword ? (
-                      <EyeOff className="h-5 w-5 text-gray-400" />
-                    ) : (
-                      <Eye className="h-5 w-5 text-gray-400" />
-                    )}
-                  </button>
-                </div>
-                {fieldErrors.confirmPassword && (
-                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{fieldErrors.confirmPassword}</p>
-                )}
-              </div>
-            </div>
-
-            <div className="flex justify-end pt-6">
-              <button
-                type="submit"
-                disabled={loading}
-                className="flex items-center px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Save className="h-4 w-4 mr-2" />
-                {loading ? "Setting up..." : "Complete Setup"}
-              </button>
-            </div>
-          </form>
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300 capitalize">
+              {userType}
+            </span>
+          </div>
         </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-300 rounded-md">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit}>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Main Form */}
+            <div className="lg:col-span-2 space-y-6">
+              {userType === 'company' ? (
+                // Company Profile Form
+                <>
+                  {/* Basic Information */}
+                  <Card className="p-4 sm:p-6 bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 rounded-lg">
+                    <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Basic Information</h2>
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="companyName" required>
+                          Company Name
+                        </Label>
+                        <Input
+                          id="companyName"
+                          value={companyData.companyName}
+                          onChange={(e) => handleInputChange("companyName", e.target.value)}
+                          onBlur={(e) => handleFieldBlur("companyName", e.target.value)}
+                          placeholder="Enter company name"
+                          required
+                        />
+                        {fieldErrors.companyName && (
+                          <p className="text-red-500 text-sm mt-1">{fieldErrors.companyName}</p>
+                        )}
+                      </div>
+
+                      <div>
+                        <Label htmlFor="industry">
+                          Industry
+                        </Label>
+                        <Input
+                          id="industry"
+                          value={companyData.industry}
+                          onChange={(e) => handleInputChange("industry", e.target.value)}
+                          placeholder="e.g., Technology, Healthcare"
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="description">
+                          Company Description
+                        </Label>
+                        <Textarea
+                          id="description"
+                          value={companyData.description}
+                          onChange={(e) => handleInputChange("description", e.target.value)}
+                          placeholder="Describe your company..."
+                          rows={4}
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="location">
+                            Location
+                          </Label>
+                          <Input
+                            id="location"
+                            value={companyData.location}
+                            onChange={(e) => handleInputChange("location", e.target.value)}
+                            placeholder="City, State"
+                          />
+                        </div>
+
+                        <div>
+                          <Label htmlFor="companySize">
+                            Company Size
+                          </Label>
+                          <Select
+                            value={companyData.companySize}
+                            onValueChange={(value) => handleInputChange("companySize", value)}
+                            options={[
+                              { value: "1-10", label: "1-10 employees" },
+                              { value: "11-50", label: "11-50 employees" },
+                              { value: "51-200", label: "51-200 employees" },
+                              { value: "201-500", label: "201-500 employees" },
+                              { value: "500+", label: "500+ employees" }
+                            ]}
+                            placeholder="Select size"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="website">
+                            Website
+                          </Label>
+                          <Input
+                            id="website"
+                            type="url"
+                            value={companyData.website}
+                            onChange={(e) => handleInputChange("website", e.target.value)}
+                            onBlur={(e) => handleFieldBlur("website", e.target.value, 'url')}
+                            placeholder="https://example.com"
+                          />
+                        </div>
+
+                        <div>
+                          <Label htmlFor="phone">
+                            Phone
+                          </Label>
+                          <Input
+                            id="phone"
+                            type="tel"
+                            value={companyData.phone}
+                            onChange={(e) => handleInputChange("phone", e.target.value)}
+                            placeholder="+1 (555) 123-4567"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <Label htmlFor="benefits">
+                          Benefits (comma-separated)
+                        </Label>
+                        <Input
+                          id="benefits"
+                          value={companyData.benefits.join(', ')}
+                          onChange={(e) => handleArrayChange("benefits", e.target.value)}
+                          placeholder="Health insurance, 401k, Remote work"
+                        />
+                      </div>
+                    </div>
+                  </Card>
+                </>
+              ) : (
+                // User Profile Form
+                <>
+                  {/* Basic Information */}
+                  <Card className="p-4 sm:p-6 bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 rounded-lg">
+                    <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Basic Information</h2>
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="firstName" required>
+                            First Name
+                          </Label>
+                          <Input
+                            id="firstName"
+                            value={userData.firstName}
+                            onChange={(e) => handleInputChange("firstName", e.target.value)}
+                            onBlur={(e) => handleFieldBlur("firstName", e.target.value)}
+                            placeholder="Enter first name"
+                            required
+                          />
+                          {fieldErrors.firstName && (
+                            <p className="text-red-500 text-sm mt-1">{fieldErrors.firstName}</p>
+                          )}
+                        </div>
+
+                        <div>
+                          <Label htmlFor="lastName" required>
+                            Last Name
+                          </Label>
+                          <Input
+                            id="lastName"
+                            value={userData.lastName}
+                            onChange={(e) => handleInputChange("lastName", e.target.value)}
+                            onBlur={(e) => handleFieldBlur("lastName", e.target.value)}
+                            placeholder="Enter last name"
+                            required
+                          />
+                          {fieldErrors.lastName && (
+                            <p className="text-red-500 text-sm mt-1">{fieldErrors.lastName}</p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="phone">
+                            Phone
+                          </Label>
+                          <Input
+                            id="phone"
+                            type="tel"
+                            value={userData.phone}
+                            onChange={(e) => handleInputChange("phone", e.target.value)}
+                            placeholder="+1 (555) 123-4567"
+                          />
+                        </div>
+
+                        <div>
+                          <Label htmlFor="location">
+                            Location
+                          </Label>
+                          <Input
+                            id="location"
+                            value={userData.location}
+                            onChange={(e) => handleInputChange("location", e.target.value)}
+                            placeholder="City, State"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <Label htmlFor="headline">
+                          Professional Headline
+                        </Label>
+                        <Input
+                          id="headline"
+                          value={userData.headline}
+                          onChange={(e) => handleInputChange("headline", e.target.value)}
+                          placeholder="e.g., Senior Frontend Developer"
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="bio">
+                          Bio
+                        </Label>
+                        <Textarea
+                          id="bio"
+                          value={userData.bio}
+                          onChange={(e) => handleInputChange("bio", e.target.value)}
+                          placeholder="Tell us about yourself..."
+                          rows={4}
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="experience">
+                            Years of Experience
+                          </Label>
+                          <Input
+                            id="experience"
+                            value={userData.experience}
+                            onChange={(e) => handleInputChange("experience", e.target.value)}
+                            placeholder="e.g., 5 years"
+                          />
+                        </div>
+
+                        <div>
+                          <Label htmlFor="employmentStatus">
+                            Employment Status
+                          </Label>
+                          <Select
+                            value={userData.employmentStatus}
+                            onValueChange={(value) => handleInputChange("employmentStatus", value)}
+                            options={[
+                              { value: "Looking for opportunities", label: "Looking for opportunities" },
+                              { value: "Open to opportunities", label: "Open to opportunities" },
+                              { value: "Not looking", label: "Not looking" }
+                            ]}
+                            placeholder="Select status"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <Label htmlFor="skills">
+                          Skills (comma-separated)
+                        </Label>
+                        <Input
+                          id="skills"
+                          value={userData.skills.join(', ')}
+                          onChange={(e) => handleArrayChange("skills", e.target.value)}
+                          placeholder="React, JavaScript, Node.js"
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="expectedSalary">
+                          Expected Salary
+                        </Label>
+                        <Input
+                          id="expectedSalary"
+                          type="number"
+                          value={userData.expectedSalary}
+                          onChange={(e) => handleInputChange("expectedSalary", e.target.value)}
+                          placeholder="e.g., 80000"
+                        />
+                      </div>
+                    </div>
+                  </Card>
+                </>
+              )}
+
+              {/* Password Section */}
+              <Card className="p-4 sm:p-6 bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 rounded-lg">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Security</h2>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="password" required>
+                        Password
+                      </Label>
+                      <div className="relative">
+                        <Input
+                          id="password"
+                          type={showPassword ? "text" : "password"}
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          onBlur={(e) => handleFieldBlur("password", e.target.value)}
+                          placeholder="Create a password"
+                          required
+                        />
+                        <button
+                          type="button"
+                          className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                          onClick={() => setShowPassword(!showPassword)}
+                        >
+                          {showPassword ? (
+                            <EyeOff className="h-5 w-5 text-gray-400" />
+                          ) : (
+                            <Eye className="h-5 w-5 text-gray-400" />
+                          )}
+                        </button>
+                      </div>
+                      {fieldErrors.password && (
+                        <p className="text-red-500 text-sm mt-1">{fieldErrors.password}</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <Label htmlFor="confirmPassword" required>
+                        Confirm Password
+                      </Label>
+                      <div className="relative">
+                        <Input
+                          id="confirmPassword"
+                          type={showConfirmPassword ? "text" : "password"}
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          onBlur={(e) => handleFieldBlur("confirmPassword", e.target.value)}
+                          placeholder="Confirm your password"
+                          required
+                        />
+                        <button
+                          type="button"
+                          className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        >
+                          {showConfirmPassword ? (
+                            <EyeOff className="h-5 w-5 text-gray-400" />
+                          ) : (
+                            <Eye className="h-5 w-5 text-gray-400" />
+                          )}
+                        </button>
+                      </div>
+                      {fieldErrors.confirmPassword && (
+                        <p className="text-red-500 text-sm mt-1">{fieldErrors.confirmPassword}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            </div>
+
+            {/* Sidebar */}
+            <div className="space-y-6">
+              {/* Preview */}
+              <Card className="p-4 sm:p-6 bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 rounded-lg">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Preview</h2>
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
+                      userType === 'company' ? 'bg-blue-600' : 'bg-green-600'
+                    }`}>
+                      {userType === 'company' ? (
+                        <Building className="w-6 h-6 text-white" />
+                      ) : (
+                        <User className="w-6 h-6 text-white" />
+                      )}
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-gray-900 dark:text-white">
+                        {userType === 'company' ? companyData.companyName : `${userData.firstName} ${userData.lastName}`}
+                      </h4>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        {userType === 'company' ? companyData.industry : userData.headline}
+                      </p>
+                    </div>
+                  </div>
+
+                  <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                    {userType === 'company' ? companyData.description : userData.bio}
+                  </p>
+
+                  <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                    {userType === 'company' ? (
+                      <>
+                        <p>📍 {companyData.location}</p>
+                        <p>👥 {companyData.companySize} employees</p>
+                      </>
+                    ) : (
+                      <>
+                        <p>📍 {userData.location}</p>
+                        <p>💼 {userData.employmentStatus}</p>
+                        <p>🎯 {userData.experience} experience</p>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </Card>
+
+              {/* Submit Button */}
+              <Card className="p-4 sm:p-6 bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 rounded-lg">
+                <Button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full flex items-center justify-center gap-2"
+                >
+                  <Save className="h-4 w-4" />
+                  {loading ? "Setting up..." : "Complete Setup"}
+                </Button>
+              </Card>
+            </div>
+          </div>
+        </form>
       </div>
     </div>
   );

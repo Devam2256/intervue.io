@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "../common/ui/Card.jsx"
 import { Users } from "lucide-react"
 import { CandidateCard } from "./CandidateCard"
 
-export function CandidatesList({ candidates }) {
+export function CandidatesList({ candidates, onStatusUpdate }) {
   return (
     <Card>
       <CardHeader>
@@ -16,7 +16,12 @@ export function CandidatesList({ candidates }) {
         {candidates.length > 0 ? (
           <div className="space-y-4">
             {candidates.map((candidate, index) => (
-              <CandidateCard key={candidate.id} candidate={candidate} isLast={index === candidates.length - 1} />
+              <CandidateCard 
+                key={candidate._id} 
+                candidate={candidate} 
+                isLast={index === candidates.length - 1}
+                onStatusUpdate={onStatusUpdate}
+              />
             ))}
           </div>
         ) : (

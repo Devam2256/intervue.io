@@ -82,6 +82,9 @@ export function LoginForm() {
         throw new Error(data.error || 'Login failed');
       }
 
+      // Trigger profile refresh event
+      localStorage.setItem('loginEvent', Date.now().toString());
+      
       // Redirect based on user type and profile setup status
       if (data.requiresProfileSetup) {
         navigate('/profile-setup');

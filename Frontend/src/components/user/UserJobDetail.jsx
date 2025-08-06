@@ -1,7 +1,6 @@
 // UserJobDetail: Job detail page for job seekers to view and apply for jobs
 import { useState, useEffect } from "react"
 import { useParams, useNavigate } from "react-router-dom"
-import { UserNavbar } from "./UserNavbar";
 import { Button } from "../common/ui/Button.jsx"
 import { Card } from "../common/ui/Card.jsx"
 import { Badge } from "../common/ui/Badge.jsx"
@@ -17,7 +16,6 @@ import {
   Globe,
   Mail,
   Phone,
-  Bookmark,
   Send,
   CheckCircle,
   AlertCircle,
@@ -34,7 +32,6 @@ export function UserJobDetail({ user }) {
   const [loading, setLoading] = useState(true)
   const [showApplication, setShowApplication] = useState(false)
   const [applicationSubmitted, setApplicationSubmitted] = useState(false)
-  const [isSaved, setIsSaved] = useState(false)
   
   // Application form state
   const [applicationData, setApplicationData] = useState({
@@ -52,21 +49,22 @@ export function UserJobDetail({ user }) {
     
     const fetchJobData = async () => {
       try {
-        const jobResponse = await fetch(`/api/jobs/${id}`);
+        const jobResponse = await fetch(`/api/jobs/${id}`, {
+          credentials: 'include'
+        });
         
-        if (jobResponse.ok) {
-          const jobData = await jobResponse.json();
-          setJob(jobData);
-          
-          // Fetch company data if we have company_id
-          if (jobData.company_id) {
-            const companyResponse = await fetch(`/api/companies/${jobData.company_id}`);
-            if (companyResponse.ok) {
-              const companyData = await companyResponse.json();
-              setCompany(companyData);
-            }
-          }
-        }
+                            if (jobResponse.ok) {
+                      const jobData = await jobResponse.json();
+                      console.log('UserJobDetail - Job data:', jobData);
+                      console.log('UserJobDetail - Company data:', jobData.company_id);
+                      setJob(jobData);
+                      
+                      // Use the populated company data from the job
+                      if (jobData.company_id && typeof jobData.company_id === 'object') {
+                        console.log('UserJobDetail - Setting company data:', jobData.company_id);
+                        setCompany(jobData.company_id);
+                      }
+                    }
       } catch (error) {
         console.error('Error fetching job data:', error);
       } finally {
@@ -89,7 +87,8 @@ export function UserJobDetail({ user }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           job_id: job._id,
-          company_id: job.company_id,
+          user_id: user._id,
+          company_id: job.company_id._id,
           name: `${user.firstName} ${user.lastName}`,
           email: user.email,
           phone: user.phone,
@@ -106,6 +105,8 @@ export function UserJobDetail({ user }) {
       if (response.ok) {
         setApplicationSubmitted(true);
         setShowApplication(false);
+        // Trigger a page refresh to update dashboard stats
+        window.location.reload();
       } else {
         throw new Error('Failed to submit application');
       }
@@ -130,8 +131,7 @@ export function UserJobDetail({ user }) {
 
   if (!job) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <UserNavbar user={user} />
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
         <div className="container mx-auto p-4 sm:p-6">
           <div className="flex justify-between items-center mb-4 sm:mb-6">
             <Button variant="ghost" onClick={() => navigate("/user")} className="flex items-center gap-2 -ml-2">
@@ -174,10 +174,9 @@ export function UserJobDetail({ user }) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <UserNavbar user={user} />
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       
-      <div className="container mx-auto p-4 sm:p-6">
+      <div className="w-full px-4 sm:px-6 py-6">
         {/* Header with Back Button and Actions */}
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
           <Button variant="sleek" onClick={() => navigate("/user")} className="flex items-center gap-2 -ml-2 self-start">
@@ -187,15 +186,6 @@ export function UserJobDetail({ user }) {
           </Button>
           
           <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setIsSaved(!isSaved)}
-              className={`flex items-center gap-2 ${isSaved ? 'text-blue-600 border-blue-600' : ''}`}
-            >
-              <Bookmark className={`h-4 w-4 ${isSaved ? 'fill-current' : ''}`} />
-              {isSaved ? 'Saved' : 'Save Job'}
-            </Button>
-            
             {job.status === 'Active' && !applicationSubmitted && (
               <Button
                 variant="primary"
@@ -290,50 +280,62 @@ export function UserJobDetail({ user }) {
                 </div>
 
                 {/* Requirements */}
-                {job.requirements && job.requirements.length > 0 && (
-                  <div>
-                    <h3 className="font-semibold mb-3 text-gray-900 dark:text-white text-lg">
-                      Requirements
-                    </h3>
+                <div>
+                  <h3 className="font-semibold mb-3 text-gray-900 dark:text-white text-lg">
+                    Requirements
+                  </h3>
+                  {job.requirements && job.requirements.length > 0 && job.requirements.some(req => req && req.trim() !== "") ? (
                     <ul className="list-disc list-inside space-y-2">
-                      {job.requirements.map((req, index) => (
+                      {job.requirements.filter(req => req && req.trim() !== "").map((req, index) => (
                         <li key={index} className="text-gray-700 dark:text-gray-300">
                           {req}
                         </li>
                       ))}
                     </ul>
-                  </div>
-                )}
+                  ) : (
+                    <p className="text-gray-500 dark:text-gray-400 text-sm italic">
+                      Not Mentioned
+                    </p>
+                  )}
+                </div>
 
                 {/* Skills */}
-                {job.skills && job.skills.length > 0 && (
-                  <div>
-                    <h3 className="font-semibold mb-3 text-gray-900 dark:text-white text-lg">
-                      Required Skills
-                    </h3>
+                <div>
+                  <h3 className="font-semibold mb-3 text-gray-900 dark:text-white text-lg">
+                    Required Skills
+                  </h3>
+                  {job.skills && job.skills.length > 0 && job.skills.some(skill => skill && skill.trim() !== "") ? (
                     <div className="flex flex-wrap gap-2">
-                      {job.skills.map((skill, index) => (
+                      {job.skills.filter(skill => skill && skill.trim() !== "").map((skill, index) => (
                         <Badge key={index} variant="default" size="md">
                           {typeof skill === "string" ? skill : skill.name}
                         </Badge>
                       ))}
                     </div>
-                  </div>
-                )}
+                  ) : (
+                    <p className="text-gray-500 dark:text-gray-400 text-sm italic">
+                      Not Mentioned
+                    </p>
+                  )}
+                </div>
 
                 {/* Benefits */}
-                {job.benefits && job.benefits.length > 0 && (
-                  <div>
-                    <h3 className="font-semibold mb-3 text-gray-900 dark:text-white text-lg">Benefits</h3>
+                <div>
+                  <h3 className="font-semibold mb-3 text-gray-900 dark:text-white text-lg">Benefits</h3>
+                  {job.benefits && job.benefits.length > 0 && job.benefits.some(benefit => benefit && benefit.trim() !== "") ? (
                     <ul className="list-disc list-inside space-y-2">
-                      {job.benefits.map((benefit, index) => (
+                      {job.benefits.filter(benefit => benefit && benefit.trim() !== "").map((benefit, index) => (
                         <li key={index} className="text-gray-700 dark:text-gray-300">
                           {benefit}
                         </li>
                       ))}
                     </ul>
-                  </div>
-                )}
+                  ) : (
+                    <p className="text-gray-500 dark:text-gray-400 text-sm italic">
+                      Not Mentioned
+                    </p>
+                  )}
+                </div>
               </div>
             </Card>
           </div>
@@ -345,9 +347,17 @@ export function UserJobDetail({ user }) {
               <h3 className="font-semibold mb-4 text-gray-900 dark:text-white">About the Company</h3>
               <div className="space-y-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center">
-                    <Building className="w-6 h-6 text-white" />
-                  </div>
+                  {company?.logo ? (
+                    <img
+                      src={company.logo}
+                      alt={company.name || "Company Logo"}
+                      className="w-12 h-12 rounded-lg object-cover"
+                    />
+                  ) : (
+                    <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center">
+                      <Building className="w-6 h-6 text-white" />
+                    </div>
+                  )}
                   <div>
                     <h4 className="font-medium text-gray-900 dark:text-white">
                       {company?.name || "Company Name"}

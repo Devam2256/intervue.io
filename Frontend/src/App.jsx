@@ -45,7 +45,6 @@ function ProtectedRoute({ children, userType }) {
         setIsAuthenticated(false);
       }
     } catch (error) {
-      console.error('Session check error:', error);
       setIsAuthenticated(false);
     } finally {
       setLoading(false);
@@ -92,7 +91,6 @@ function ProfileSetupRoute({ children }) {
       
       setRequiresProfileSetup(!data.isComplete);
     } catch (error) {
-      console.error('Profile setup check error:', error);
       setRequiresProfileSetup(true);
     } finally {
       setLoading(false);
@@ -123,44 +121,76 @@ function App() {
   // User profile state - will be fetched from database
   const [user, setUser] = useState(null);
   const [_loading, setLoading] = useState(true);
+  const [sessionKey, setSessionKey] = useState(0); // Add this to force re-fetch
   
   // Navigation function
   const navigate = useNavigate();
   
   // Fetch profile data on component mount
-  useEffect(() => {
-    const fetchProfileData = async () => {
-      try {
-        // Check if user is authenticated
-        const sessionResponse = await fetch('/api/auth/session', {
-          credentials: 'include'
-        });
-        const sessionData = await sessionResponse.json();
-        
-        if (sessionData.isAuthenticated) {
-          // Fetch appropriate profile based on user type
-          if (sessionData.user.userType === 'company') {
-            const companyResponse = await fetch(`/api/companies/${sessionData.user._id}`, {
+  const fetchProfileData = async () => {
+    try {
+      // Check if user is authenticated
+      const sessionResponse = await fetch('/api/auth/session', {
+        credentials: 'include'
+      });
+      const sessionData = await sessionResponse.json();
+      
+      if (sessionData.isAuthenticated && sessionData.user && sessionData.user._id) {
+        // Fetch appropriate profile based on user type
+        if (sessionData.user.userType === 'company') {
+          try {
+            const companyResponse = await fetch(`/api/profile/company`, {
               credentials: 'include'
             });
-            const companyData = await companyResponse.json();
-            setProfile(companyData);
-          } else {
-            const userResponse = await fetch(`/api/users/${sessionData.user._id}`, {
+            
+            if (companyResponse.ok) {
+              const companyData = await companyResponse.json();
+              setProfile(companyData.profile);
+            }
+          } catch (error) {
+            // Handle error silently
+          }
+        } else {
+          try {
+            const userResponse = await fetch(`/api/profile/user`, {
               credentials: 'include'
             });
-            const userData = await userResponse.json();
-            setUser(userData);
+            
+            if (userResponse.ok) {
+              const userData = await userResponse.json();
+              setUser(userData.profile);
+            }
+          } catch (error) {
+            // Handle error silently
           }
         }
-      } catch (error) {
-        console.error('Error fetching profile data:', error);
-      } finally {
-        setLoading(false);
+      }
+    } catch (error) {
+      // Handle error silently
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Function to refresh profile data
+  const refreshProfileData = () => {
+    setSessionKey(prev => prev + 1);
+  };
+  
+  useEffect(() => {
+    fetchProfileData();
+  }, [sessionKey]);
+
+  // Listen for login events
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === 'loginEvent') {
+        refreshProfileData();
       }
     };
-    
-    fetchProfileData();
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
   
   const handleProfileClick = () => {
@@ -183,12 +213,13 @@ function App() {
         <Route path="/auth/forgot-password" element={<ForgotPasswordForm />} />
         <Route path="/auth/reset-password" element={<ResetPasswordForm />} />
         <Route path="/auth/verify-reset-otp" element={<OTPVerificationForm />} />
+        <Route path="/auth/verify-otp" element={<OTPVerificationForm />} />
         
         {/* Remove this route */}
         {/* <Route path="/auth/set-password" element={<SetPasswordForm />} /> */}
         
         {/* Profile Setup Route */}
-        <Route path="/profile-setup" element={<ProfileSetupForm />} />
+        <Route path="/profile-setup" element={<ProfileSetupForm onProfileComplete={refreshProfileData} />} />
         
         {/* Protected Company Routes */}
         <Route path="/dashboard" element={
@@ -196,7 +227,7 @@ function App() {
             <ProfileSetupRoute>
               <div>
                 <SleekNavbar 
-                  profile={profile} 
+                  profile={{ ...profile, userType: 'company' }} 
                   onProfileClick={handleProfileClick} 
                 />
                 <CompanyDashboard profile={profile} />
@@ -205,7 +236,57 @@ function App() {
           </ProtectedRoute>
         } />
         
-        {/* Other company routes... */}
+        {/* Company job creation route */}
+        <Route path="/company/jobs/new" element={
+          <ProtectedRoute userType="company">
+            <div>
+              <SleekNavbar 
+                profile={{ ...profile, userType: 'company' }} 
+                onProfileClick={handleProfileClick} 
+              />
+              <CreateJobForm asPage={true} profile={profile} />
+            </div>
+          </ProtectedRoute>
+        } />
+        
+        {/* Company job edit route */}
+        <Route path="/company/jobs/edit/:id" element={
+          <ProtectedRoute userType="company">
+            <div>
+              <SleekNavbar 
+                profile={{ ...profile, userType: 'company' }} 
+                onProfileClick={handleProfileClick} 
+              />
+              <CreateJobForm asPage={true} editMode={true} profile={profile} />
+            </div>
+          </ProtectedRoute>
+        } />
+        
+        {/* Company job detail route */}
+        <Route path="/job/:id" element={
+          <ProtectedRoute userType="company">
+            <div>
+              <SleekNavbar 
+                profile={{ ...profile, userType: 'company' }} 
+                onProfileClick={handleProfileClick} 
+              />
+              <JobDetail />
+            </div>
+          </ProtectedRoute>
+        } />
+        
+        {/* Company profile route */}
+        <Route path="/profile" element={
+          <ProtectedRoute userType="company">
+            <div>
+              <SleekNavbar 
+                profile={{ ...profile, userType: 'company' }} 
+                onProfileClick={handleProfileClick} 
+              />
+              <ProfileSetup profile={profile} onProfileComplete={refreshProfileData} />
+            </div>
+          </ProtectedRoute>
+        } />
         
         {/* Protected User Routes - Add SleekNavbar */}
         <Route path="/user" element={
@@ -213,7 +294,7 @@ function App() {
             <ProfileSetupRoute>
               <div>
                 <SleekNavbar 
-                  profile={user} 
+                  profile={{ ...user, userType: 'user' }} 
                   onProfileClick={handleUserProfileClick} 
                 />
                 <UserDashboard user={user} />
@@ -225,12 +306,13 @@ function App() {
           <ProtectedRoute userType="user">
             <div>
               <SleekNavbar 
-                profile={user} 
+                profile={{ ...user, userType: 'user' }} 
                 onProfileClick={handleUserProfileClick} 
               />
               <UserProfile 
                 user={user} 
-                setUser={setUser} 
+                setUser={setUser}
+                onProfileUpdate={refreshProfileData}
               />
             </div>
           </ProtectedRoute>
@@ -239,7 +321,7 @@ function App() {
           <ProtectedRoute userType="user">
             <div>
               <SleekNavbar 
-                profile={user} 
+                profile={{ ...user, userType: 'user' }} 
                 onProfileClick={handleUserProfileClick} 
               />
               <UserJobDetail 
@@ -252,7 +334,6 @@ function App() {
         {/* Legacy routes for backward compatibility */}
         <Route path="/company" element={<Navigate to="/dashboard" replace />} />
         <Route path="/user-dashboard" element={<Navigate to="/user" replace />} />
-        <Route path="/auth/verify-reset-otp" element={<OTPVerificationForm />} />
       </Routes>
     </div>
   );

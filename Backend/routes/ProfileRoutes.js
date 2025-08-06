@@ -5,6 +5,7 @@ const Company = require('../models/Company');
 // Remove this line
 // const UserProfile = require('../models/UserProfile');
 const { requireAuth, requireUserType } = require('../middleware/session');
+const { sendEmail } = require('../config/email');
 
 // Get profile setup status
 router.get('/setup-status', requireAuth, async (req, res) => {
@@ -33,7 +34,6 @@ router.get('/setup-status', requireAuth, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Profile setup status error:', error);
     res.status(500).json({ error: 'Failed to get profile setup status' });
   }
 });
@@ -52,6 +52,7 @@ router.post('/setup/company', requireUserType('company'), async (req, res) => {
       phone,
       socialLinks,
       benefits,
+      logo,
       password // New field
     } = req.body;
 
@@ -98,8 +99,10 @@ router.post('/setup/company', requireUserType('company'), async (req, res) => {
         companySize: parsedCompanySize, // Use the parsed value
         website,
         phone,
-        socialLinks,
+        email: user.email, // Add email from user
+        socialMedia: socialLinks, // Map socialLinks to socialMedia
         benefits,
+        logo,
         isProfileComplete: true
       });
     } else {
@@ -113,13 +116,18 @@ router.post('/setup/company', requireUserType('company'), async (req, res) => {
         companySize: parsedCompanySize, // Use the parsed value
         website,
         phone,
-        socialLinks,
+        email: user.email, // Add email from user
+        socialMedia: socialLinks, // Map socialLinks to socialMedia
         benefits,
+        logo,
         isProfileComplete: true
       });
     }
 
     await company.save();
+
+    // Send welcome email after profile completion
+    await sendEmail(user.email, 'welcomeEmail', user.userType, company.name);
 
     res.json({
       message: 'Company profile setup successful',
@@ -127,7 +135,6 @@ router.post('/setup/company', requireUserType('company'), async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Company profile setup error:', error);
     res.status(500).json({ error: 'Failed to setup company profile' });
   }
 });
@@ -135,8 +142,10 @@ router.post('/setup/company', requireUserType('company'), async (req, res) => {
 // Setup user profile
 router.post('/setup/user', requireUserType('user'), async (req, res) => {
   try {
+    console.log('Profile setup route called');
     const userId = req.session.userId;
-    const userEmail = req.session.email; // Get email from session
+    console.log('Session data:', { userId, email: req.session.email, userType: req.session.userType });
+    console.log('Request body:', JSON.stringify(req.body, null, 2));
     const {
       firstName,
       lastName,
@@ -168,17 +177,19 @@ router.post('/setup/user', requireUserType('user'), async (req, res) => {
     }
 
     // Update user with password and profile information
+    console.log('Looking for user with ID:', userId);
     const user = await User.findById(userId);
     if (!user) {
+      console.log('User not found with ID:', userId);
       return res.status(404).json({ error: 'User not found' });
     }
+    console.log('Found user:', user.email, 'isEmailVerified:', user.isEmailVerified);
 
     // Update user with all profile fields
-    Object.assign(user, {
+    const updateData = {
       password,
       firstName,
       lastName,
-      email: userEmail, // Include email from session
       phone,
       location,
       headline,
@@ -188,12 +199,21 @@ router.post('/setup/user', requireUserType('user'), async (req, res) => {
       skills,
       education,
       workExperience, // Note: this matches the field name in User model
-      portfolio,
+      socialMedia: portfolio, // Map portfolio to socialMedia field in User model
       expectedSalary,
       isProfileComplete: true
-    });
+    };
+    
+    console.log('Updating user with data:', JSON.stringify(updateData, null, 2));
+    
+    Object.assign(user, updateData);
 
+    console.log('About to save user...');
     await user.save();
+    console.log('User saved successfully');
+
+    // Send welcome email after profile completion
+    await sendEmail(user.email, 'welcomeEmail', user.userType, `${user.firstName} ${user.lastName}`);
 
     res.json({
       message: 'User profile setup successful',
@@ -202,6 +222,17 @@ router.post('/setup/user', requireUserType('user'), async (req, res) => {
 
   } catch (error) {
     console.error('User profile setup error:', error);
+    
+    // Provide more specific error messages
+    if (error.name === 'ValidationError') {
+      const validationErrors = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({ error: `Validation error: ${validationErrors.join(', ')}` });
+    }
+    
+    if (error.code === 11000) {
+      return res.status(400).json({ error: 'A user with this email already exists' });
+    }
+    
     res.status(500).json({ error: 'Failed to setup user profile' });
   }
 });
@@ -210,6 +241,7 @@ router.post('/setup/user', requireUserType('user'), async (req, res) => {
 router.get('/company', requireUserType('company'), async (req, res) => {
   try {
     const userId = req.session.userId;
+    
     const company = await Company.findOne({ userId });
 
     if (!company) {
@@ -219,7 +251,6 @@ router.get('/company', requireUserType('company'), async (req, res) => {
     res.json({ profile: company });
 
   } catch (error) {
-    console.error('Get company profile error:', error);
     res.status(500).json({ error: 'Failed to get company profile' });
   }
 });
@@ -238,7 +269,6 @@ router.get('/user', requireUserType('user'), async (req, res) => {
     res.json({ profile: userProfile });
 
   } catch (error) {
-    console.error('Get user profile error:', error);
     res.status(500).json({ error: 'Failed to get user profile' });
   }
 });
@@ -254,6 +284,20 @@ router.put('/company', requireUserType('company'), async (req, res) => {
       return res.status(404).json({ error: 'Company profile not found' });
     }
 
+    // Validate required fields
+    if (!updateData.name) {
+      return res.status(400).json({ error: 'Company name is required' });
+    }
+    if (!updateData.industry) {
+      return res.status(400).json({ error: 'Industry is required' });
+    }
+    if (!updateData.description) {
+      return res.status(400).json({ error: 'Description is required' });
+    }
+    if (!updateData.location) {
+      return res.status(400).json({ error: 'Location is required' });
+    }
+    
     Object.assign(company, updateData);
     await company.save();
 
@@ -263,7 +307,6 @@ router.put('/company', requireUserType('company'), async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Update company profile error:', error);
     res.status(500).json({ error: 'Failed to update company profile' });
   }
 });
@@ -289,7 +332,6 @@ router.put('/user', requireUserType('user'), async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Update user profile error:', error);
     res.status(500).json({ error: 'Failed to update user profile' });
   }
 });

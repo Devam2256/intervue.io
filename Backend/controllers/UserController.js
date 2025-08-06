@@ -56,9 +56,6 @@ exports.getUserByEmail = async (req, res) => {
 // Create a new user
 exports.createUser = async (req, res) => {
   try {
-    // Log the incoming user data for debugging
-    console.log('Creating user:', req.body);
-    
     // Create new user with data from request body
     const user = new User(req.body);
     

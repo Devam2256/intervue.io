@@ -4,7 +4,7 @@ const bcrypt = require('bcryptjs'); // Changed from 'bcrypt' to 'bcryptjs'
 const userSchema = new mongoose.Schema({
   u_id: {
     type: mongoose.Schema.Types.ObjectId,
-    default: mongoose.Types.ObjectId,
+    default: () => new mongoose.Types.ObjectId(),
     unique: true
   },
   email: {
@@ -18,7 +18,7 @@ const userSchema = new mongoose.Schema({
   password: {
     type: String,
     required: function() {
-      return this.isEmailVerified === true;
+      return this.isEmailVerified === true && this.isProfileComplete === true;
     },
     minlength: [6, 'Password must be at least 6 characters']
   },
@@ -42,14 +42,14 @@ const userSchema = new mongoose.Schema({
   firstName: {
     type: String,
     required: function() {
-      return this.userType === 'user';
+      return this.userType === 'user' && this.isProfileComplete === true;
     },
     trim: true
   },
   lastName: {
     type: String,
     required: function() {
-      return this.userType === 'user';
+      return this.userType === 'user' && this.isProfileComplete === true;
     },
     trim: true
   },
@@ -162,6 +162,10 @@ const userSchema = new mongoose.Schema({
   isProfileComplete: {
     type: Boolean,
     default: false
+  },
+  avatar: {
+    type: String,
+    trim: true
   }
 }, {
   timestamps: true

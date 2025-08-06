@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom"
 import { Button } from "../common/ui/Button"
 import { Input, Textarea, Select, Label } from "../common/ui/Input"
 import { Card } from "../common/ui/Card"
-import { ArrowLeft, Building, Upload, X, Save, Sun, Moon, Plus, Trash2, Edit } from "lucide-react"
+import { ArrowLeft, Building, Upload, X, Save, Sun, Moon, Plus, Trash2, Edit, LogOut } from "lucide-react"
 
 const industryOptions = [
   { value: "Technology", label: "Technology" },
@@ -26,7 +26,7 @@ const companySizeOptions = [
   { value: "1000+", label: "1000+ employees" },
 ]
 
-export function ProfileSetup() {
+export function ProfileSetup({ onProfileComplete }) {
   const navigate = useNavigate()
   const [isEditing, setIsEditing] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -34,6 +34,7 @@ export function ProfileSetup() {
   const [saving, setSaving] = useState(false)
   const [fieldErrors, setFieldErrors] = useState({})
   const [successMessage, setSuccessMessage] = useState("")
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
   
   const [formData, setFormData] = useState({
     companyName: "",
@@ -63,12 +64,15 @@ export function ProfileSetup() {
   const fetchProfileData = async () => {
     setFetching(true)
     try {
-      // Simulate API call to fetch existing profile
-      const response = await fetch("/api/company/profile")
+      // Fetch existing profile
+      const response = await fetch("/api/profile/company", {
+        credentials: 'include'
+      })
       if (response.ok) {
-        const profileData = await response.json()
+        const data = await response.json()
+        const profileData = data.profile || data
         setFormData({
-          companyName: profileData.companyName || "",
+          companyName: profileData.name || "",
           industry: profileData.industry || "",
           companySize: profileData.companySize || "",
           location: profileData.location || "",
@@ -76,22 +80,43 @@ export function ProfileSetup() {
           email: profileData.email || "",
           phone: profileData.phone || "",
           website: profileData.website || "",
-          founded: profileData.founded || "",
+          founded: profileData.foundedYear || "",
           logo: profileData.logo || null,
           socialLinks: {
-            linkedin: profileData.socialLinks?.linkedin || "",
-            twitter: profileData.socialLinks?.twitter || "",
-            facebook: profileData.socialLinks?.facebook || "",
+            linkedin: profileData.socialMedia?.linkedin || "",
+            twitter: profileData.socialMedia?.twitter || "",
+            facebook: profileData.socialMedia?.facebook || "",
           },
           benefits: profileData.benefits || [],
         })
       }
     } catch (error) {
-      console.error("Error fetching profile:", error)
+      // Handle error silently
     } finally {
       setFetching(false)
     }
   }
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      const response = await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include'
+      });
+
+      if (response.ok) {
+        // Clear any local state and redirect to login
+        navigate('/auth/login');
+      } else {
+        console.error('Logout failed');
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
 
   // Validation functions
   const validateCompanyName = (value) => {
@@ -282,22 +307,46 @@ export function ProfileSetup() {
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1000))
       
+      // Map form data to database fields
+      const profileData = {
+        name: formData.companyName,
+        industry: formData.industry,
+        companySize: formData.companySize,
+        location: formData.location,
+        description: formData.description,
+        email: formData.email,
+        phone: formData.phone,
+        website: formData.website,
+        foundedYear: formData.founded ? parseInt(formData.founded) : undefined,
+        logo: formData.logo,
+        socialMedia: formData.socialLinks,
+        benefits: formData.benefits,
+      };
+      
       // Save to database
-      const response = await fetch("/api/company/profile", {
+      const response = await fetch("/api/profile/company", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        credentials: 'include',
+        body: JSON.stringify(profileData),
       })
 
       if (response.ok) {
+        const responseData = await response.json();
         setSuccessMessage("Profile updated successfully!")
         setIsEditing(false)
         setTimeout(() => setSuccessMessage(""), 3000)
+        
+        // Call the onProfileComplete callback to refresh profile data
+        if (onProfileComplete) {
+          onProfileComplete();
+        }
       } else {
-        throw new Error("Failed to update profile")
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to update profile")
       }
     } catch (error) {
-      console.error("Error saving profile:", error)
+      // Handle error silently
     } finally {
       setSaving(false)
     }
@@ -316,7 +365,6 @@ export function ProfileSetup() {
 
   return (
     <div className="relative min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="fixed inset-0 z-10 backdrop-blur-md bg-black/10" aria-hidden="true"></div>
       <div className="relative z-20 w-full h-full p-4 sm:p-8">
         {/* Success Message */}
         {successMessage && (
@@ -329,7 +377,7 @@ export function ProfileSetup() {
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
           {/* Web/Desktop Buttons */}
           <div className="hidden sm:flex items-center gap-4">
-            <Button variant="sleek" onClick={() => navigate("/")} className="flex items-center gap-2 -ml-2">
+            <Button variant="sleek" onClick={() => navigate("/dashboard")} className="flex items-center gap-2 -ml-2">
               <ArrowLeft className="h-4 w-4" />
               <span>Back to Dashboard</span>
             </Button>
@@ -351,6 +399,15 @@ export function ProfileSetup() {
                 </Button>
               </>
             )}
+            <Button
+              variant="outline"
+              onClick={handleLogout}
+              disabled={isLoggingOut}
+              className="flex items-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+            >
+              <LogOut className="h-4 w-4" />
+              {isLoggingOut ? "Logging out..." : "Logout"}
+            </Button>
           </div>
         </div>
 
@@ -358,7 +415,7 @@ export function ProfileSetup() {
         <div className="sm:hidden fixed bottom-0 left-0 right-0 z-30 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex justify-between px-6 py-2 gap-2 shadow-lg">
           <Button
             variant="sleek"
-            onClick={() => navigate("/")}
+            onClick={() => navigate("/dashboard")}
             className="flex-1 flex items-center justify-center gap-2"
           >
             <ArrowLeft className="h-4 w-4" />
