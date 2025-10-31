@@ -6,7 +6,7 @@ Intervue.io is a comprehensive job management platform that connects job seekers
 ## Project Structure
 
 ### Backend
-- **Technologies**: React, Node.js, Express.js, MongoDB
+- **Technologies**: Node.js, Express.js, MongoDB
 - **Key Directories**:
   - `/config`: Database and email configuration
   - `/controllers`: Business logic for API endpoints
