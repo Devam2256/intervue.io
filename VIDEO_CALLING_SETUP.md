@@ -1,8 +1,8 @@
-# Video Calling Integration - InterVue.io
+# Video Calling Integration - Intervue.io
 
 ## Overview
 
-The InterVue.io job portal now includes integrated video calling functionality that allows companies to schedule interviews with candidates using either Google Meet or the built-in video calling system.
+The Intervue.io job management platform now includes integrated video calling functionality that allows companies to schedule interviews with candidates using either Google Meet or the built-in video calling system.
 
 ## Features
 
@@ -165,7 +165,3 @@ npm run dev
 3. **Chat**: Built-in chat during video calls
 4. **Analytics**: Interview performance tracking
 5. **Mobile App**: Native mobile application support
-
-## Support
-
-For technical support or questions about the video calling integration, please refer to the main project documentation or contact the development team. 
