@@ -136,9 +136,3 @@ npm start
 cd Frontend
 npm run dev
 ```
-
-## Contributing
-Please read the contribution guidelines before submitting pull requests.
-
-## License
-This project is licensed under the MIT License.
