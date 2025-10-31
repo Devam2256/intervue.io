@@ -1,12 +1,12 @@
-# InterVue - Job Portal Application
+# Intervue.io - A Job Management Platform
 
 ## Project Overview
-InterVue is a comprehensive job portal application that connects job seekers with employers. The platform allows companies to post job listings and manage applications, while job seekers can browse jobs, apply, and track their application status.
+Intervue.io is a comprehensive job management platform that connects job seekers with employers. The platform allows companies to post job listings and manage applications, while job seekers can browse jobs, apply, and track their application status.
 
 ## Project Structure
 
 ### Backend
-- **Technologies**: Node.js, Express, MongoDB
+- **Technologies**: React, Node.js, Express.js, MongoDB
 - **Key Directories**:
   - `/config`: Database and email configuration
   - `/controllers`: Business logic for API endpoints
